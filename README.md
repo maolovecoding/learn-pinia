@@ -346,3 +346,82 @@ const wrapAction = (key: string, action: any, store: any) => {
   };
 };
 ```
+
+### setupStore的原理
+
+```ts
+function useStore() {
+  // 必须在setup中使用
+  const currentInstance = getCurrentInstance();
+  if (!currentInstance) throw new Error("pinia 需要在setup函数中使用");
+  // 注入 pinia
+  const pinia = inject<IRootPinia>(symbolPinia)!;
+  // 还没注册
+  if (!pinia._s.has(id)) {
+    if (isSetupStore) {
+      // 创建setupStore
+      createSetupStore(id, storeSetup, pinia);
+    } else {
+      // counter:state:{count:0}
+      createOptionsStore(id, options, pinia);
+    }
+  }
+  // 获取store
+  const store = pinia._s.get(id);
+  return store;
+}
+const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
+  // 一个store 就是一个reactive对象
+  const store = reactive({});
+  // store单独的scope
+  let scope: EffectScope;
+  // scope可以停止所有的store 每个store也可以停止自己的
+  const setupStore = pinia._e.run(() => {
+    scope = effectScope();
+    return scope.run(() => setup());
+  });
+  // 处理action的this问题
+  for (const key in setupStore) {
+    const prop = setupStore[key];
+    if (typeof prop === "function") {
+      // 扩展action
+      setupStore[key] = wrapAction(key, prop, store);
+    }
+  }
+  Object.assign(store, setupStore);
+  // 向pinia中放入store
+  pinia._s.set(id, store);
+  return store;
+};
+
+const createOptionsStore = (
+  id: string,
+  options: Pick<IPiniaStoreOptions, "actions" | "getters" | "state">,
+  pinia: IRootPinia
+) => {
+  const { state, getters = {}, actions } = options;
+  const setup = () => {
+    // 缓存 state
+    if (pinia.state.value[id]) {
+      console.warn(`${id} store 已经存在！`);
+    }
+    const localState = (pinia.state.value[id] = state ? state() : {});
+    return Object.assign(
+      localState,
+      actions,
+      Object.keys(getters).reduce(
+        (computedGetter: { [key: string]: ComputedRef<any> }, name) => {
+          // 计算属性可缓存
+          computedGetter[name] = computed(() => {
+            // 我们需要获取当前的store是谁
+            return Reflect.apply(getters[name], store, [store]);
+          });
+          return computedGetter;
+        },
+        {}
+      )
+    );
+  };
+  const store = createSetupStore(id, setup, pinia);
+};
+```
