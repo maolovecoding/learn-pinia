@@ -80,6 +80,9 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
   }
   const partialStore = {
     $patch,
+    $reset(){
+      console.warn(`setup store 不允许使用 $reset 方法`)
+    }
   };
   // 一个store 就是一个reactive对象
   const store = reactive(partialStore);
@@ -133,6 +136,13 @@ const createOptionsStore = (
     );
   };
   const store = createSetupStore(id, setup, pinia);
+  // 重置状态API
+  (store as any).$reset = function $reset() {
+    const newState = state ? state() : {};
+    store.$patch(($state: any) => {
+      Object.assign($state, newState);
+    });
+  };
 };
 
 const wrapAction = (key: string, action: any, store: any) => {

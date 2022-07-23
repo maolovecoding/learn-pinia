@@ -488,3 +488,8 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
   return store;
 };
 ```
+
+### $reset重置状态
+
+该API只能在定义store的时候传入的是一个对象的形式才能重置，如果是setup形式，是不能重置状态的。
+因为setup函数的形式，我们无法追溯原有的状态。

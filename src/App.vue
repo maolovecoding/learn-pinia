@@ -12,6 +12,9 @@ const handleClick = () => {
     fruits: [...counterStore.fruits, "橘子"],
   });
 };
+const handleResetClick = ()=>{
+  counterStore.$reset()
+}
 </script>
 
 <template>
@@ -25,5 +28,6 @@ const handleClick = () => {
       <li v-for="item in counterStore.fruits" :key="item">{{ item }}</li>
     </ul>
     <button @click="handleClick">添加水果</button>
+    <button @click="handleResetClick">重置状态</button>
   </div>
 </template>
