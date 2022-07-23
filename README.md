@@ -550,3 +550,78 @@ const partialStore = {
   },
 };
 ```
+
+### $onAction
+
+类似于发布订阅模式，通过action修改状态以后，可以监听到状态的改变，并执行用户提供的监听函数。
+**使用方式**：
+
+```ts
+counterStore.$onAction(({ after, onError, store }: any) => {
+  after((res: any) => {
+    // res是action的执行后的返回值
+    console.log("状态修改成功后的回调", res);
+  });
+  console.log(store);
+});
+```
+
+**核心原理**：
+
+```ts
+export const addSubscription = (subscriptions: any[], cb: any) => {
+  subscriptions.push(cb);
+  return () => {
+    subscriptions = subscriptions.filter((item) => item !== cb);
+  };
+};
+export const triggerSubscription = (subscriptions: any[], ...args: any) => {
+  subscriptions.forEach((cb) => cb(...args));
+};
+
+const actionSubscribes: any[] = [];
+const partialStore = {
+  // ...
+  $onAction: addSubscription.bind(null, actionSubscribes),
+};
+
+const wrapAction = (
+  key: string,
+  action: any,
+  store: any,
+  actionSubscribes: any[] = []
+) => {
+  return (...args: Parameters<typeof action>) => {
+    const afterCallback: any[] = [];
+    const onErrorCallback: any[] = [];
+    const after = (cb: any) => {
+      afterCallback.push(cb);
+    };
+    const onError = (cb: any) => {
+      onErrorCallback.push(cb);
+    };
+    // 触发 action 给你传递两个参数
+    triggerSubscription(actionSubscribes, { after, onError, store });
+    let res: any;
+    try {
+      // 触发action之前 可以触发一些额外的逻辑
+      res = Reflect.apply(action, store, args);
+      if (res instanceof Promise) {
+        return res
+          .then((value: any) => {
+            triggerSubscription(afterCallback, value);
+          })
+          .catch((err) => {
+            triggerSubscription(onErrorCallback, err);
+            return Promise.reject(err);
+          });
+      } 
+      triggerSubscription(afterCallback, res);
+    } catch (err) {
+      triggerSubscription(onErrorCallback, err);
+    }
+    // 返回值也可以做处理
+    return res;
+  };
+};
+```

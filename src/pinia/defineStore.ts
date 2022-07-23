@@ -11,6 +11,7 @@ import {
   WatchOptions,
 } from "vue";
 import { IRootPinia } from "./createPinia";
+import { addSubscription, triggerSubscription } from "./pubSub";
 import { symbolPinia } from "./rootStore";
 
 export function defineStore(options: IPiniaStoreOptions): any;
@@ -80,6 +81,7 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
       mergeReactiveObject(store, partialStateOrMutation);
     }
   }
+  const actionSubscribes: any[] = [];
   const partialStore = {
     $patch,
     $reset() {
@@ -100,6 +102,7 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
         )
       );
     },
+    $onAction: addSubscription.bind(null, actionSubscribes),
   };
   // 一个store 就是一个reactive对象
   const store = reactive(partialStore);
@@ -115,7 +118,7 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
     const prop = setupStore[key];
     if (typeof prop === "function") {
       // 扩展action
-      setupStore[key] = wrapAction(key, prop, store);
+      setupStore[key] = wrapAction(key, prop, store, actionSubscribes);
     }
   }
   Object.assign(store, setupStore);
@@ -162,10 +165,41 @@ const createOptionsStore = (
   };
 };
 
-const wrapAction = (key: string, action: any, store: any) => {
+const wrapAction = (
+  key: string,
+  action: any,
+  store: any,
+  actionSubscribes: any[] = []
+) => {
   return (...args: Parameters<typeof action>) => {
-    // 触发action之前 可以触发一些额外的逻辑
-    const res = Reflect.apply(action, store, args);
+    const afterCallback: any[] = [];
+    const onErrorCallback: any[] = [];
+    const after = (cb: any) => {
+      afterCallback.push(cb);
+    };
+    const onError = (cb: any) => {
+      onErrorCallback.push(cb);
+    };
+    // 触发 action 给你传递两个参数
+    triggerSubscription(actionSubscribes, { after, onError, store });
+    let res: any;
+    try {
+      // 触发action之前 可以触发一些额外的逻辑
+      res = Reflect.apply(action, store, args);
+      if (res instanceof Promise) {
+        return res
+          .then((value: any) => {
+            triggerSubscription(afterCallback, value);
+          })
+          .catch((err) => {
+            triggerSubscription(onErrorCallback, err);
+            return Promise.reject(err);
+          });
+      } 
+      triggerSubscription(afterCallback, res);
+    } catch (err) {
+      triggerSubscription(onErrorCallback, err);
+    }
     // 返回值也可以做处理
     return res;
   };

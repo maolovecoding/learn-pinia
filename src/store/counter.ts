@@ -17,6 +17,7 @@ export default defineStore("counter", {
   actions: {
     increment(num: number) {
       this.count += num;
+      return this.count
     },
   },
 });

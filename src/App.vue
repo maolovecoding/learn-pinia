@@ -12,9 +12,16 @@ const handleClick = () => {
     fruits: [...counterStore.fruits, "橘子"],
   });
 };
-const handleResetClick = ()=>{
-  counterStore.$reset()
-}
+const handleResetClick = () => {
+  counterStore.$reset();
+};
+counterStore.$onAction(({ after, onError, store }: any) => {
+  after((res: any) => {
+    // res是action的执行后的返回值
+    console.log("状态修改成功后的回调", res);
+  });
+  // console.log(store);
+});
 </script>
 
 <template>
