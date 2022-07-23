@@ -493,3 +493,60 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
 
 该API只能在定义store的时候传入的是一个对象的形式才能重置，如果是setup形式，是不能重置状态的。
 因为setup函数的形式，我们无法追溯原有的状态。
+
+```ts
+const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
+  // ...
+  const partialStore = {
+    $patch,
+    $reset(){
+      console.warn(`setup store 不允许使用 $reset 方法`)
+    }
+  };
+  // ...
+  return store;
+};
+const createOptionsStore = (
+  id: string,
+  options: Pick<IPiniaStoreOptions, "actions" | "getters" | "state">,
+  pinia: IRootPinia
+) => {
+  // ......
+  const store = createSetupStore(id, setup, pinia);
+  // 重置状态API
+  store.$reset = function $reset() {
+    const newState = state ? state() : {};
+    store.$patch(($state: any) => {
+      Object.assign($state, newState);
+    });
+  };
+};
+```
+
+### $subscribe监听
+
+当store状态发生改变的时候，可以监控到数据的改变，并且通知用户。本质上内部就是一个watch，通知方式就是回调的形式。
+
+```ts
+const partialStore = {
+  $patch,
+  $reset() {
+    console.warn(`setup store 不允许使用 $reset 方法`);
+  },
+  $subscribe(
+    callback: (mutation?: any, state?: any) => void,
+    options?: WatchOptions
+  ) {
+    scope.run(() =>
+      watch(
+        pinia.state.value[id],
+        (state) => {
+          // 触发
+          callback({ type: "dirct" }, state);
+        },
+        options
+      )
+    );
+  },
+};
+```

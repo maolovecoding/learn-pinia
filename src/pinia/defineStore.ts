@@ -7,6 +7,8 @@ import {
   computed,
   ComputedRef,
   isRef,
+  watch,
+  WatchOptions,
 } from "vue";
 import { IRootPinia } from "./createPinia";
 import { symbolPinia } from "./rootStore";
@@ -80,9 +82,24 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
   }
   const partialStore = {
     $patch,
-    $reset(){
-      console.warn(`setup store 不允许使用 $reset 方法`)
-    }
+    $reset() {
+      console.warn(`setup store 不允许使用 $reset 方法`);
+    },
+    $subscribe(
+      callback: (mutation?: any, state?: any) => void,
+      options?: WatchOptions
+    ) {
+      scope.run(() =>
+        watch(
+          pinia.state.value[id],
+          (state) => {
+            // 触发
+            callback({ type: "dirct" }, state);
+          },
+          options
+        )
+      );
+    },
   };
   // 一个store 就是一个reactive对象
   const store = reactive(partialStore);
@@ -137,7 +154,7 @@ const createOptionsStore = (
   };
   const store = createSetupStore(id, setup, pinia);
   // 重置状态API
-  (store as any).$reset = function $reset() {
+  store.$reset = function $reset() {
     const newState = state ? state() : {};
     store.$patch(($state: any) => {
       Object.assign($state, newState);
