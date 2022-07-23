@@ -22,9 +22,15 @@ counterStore.$onAction(({ after, onError, store }: any) => {
   });
   // console.log(store);
 });
-setTimeout(() => {
-  counterStore.$dispose();
-}, 3000);
+// setTimeout(() => {
+//   counterStore.$dispose();
+// }, 3000);
+
+const handleCoverClick = () => {
+  counterStore.$state = {
+    count: 100,
+  };
+};
 </script>
 
 <template>
@@ -39,5 +45,6 @@ setTimeout(() => {
     </ul>
     <button @click="handleClick">添加水果</button>
     <button @click="handleResetClick">重置状态</button>
+    <button @click="handleCoverClick">覆盖状态</button>
   </div>
 </template>

@@ -127,6 +127,17 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
       setupStore[key] = wrapAction(key, prop, store, actionSubscribes);
     }
   }
+  // 获取状态
+  Object.defineProperty(store, "$state", {
+    get() {
+      return pinia.state.value[id];
+    },
+    set(newState) {
+      $patch(($state: any) => {
+        Object.assign($state, newState);
+      });
+    },
+  });
   Object.assign(store, setupStore);
   // 向pinia中放入store
   pinia._s.set(id, store);

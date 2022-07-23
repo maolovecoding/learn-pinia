@@ -638,3 +638,29 @@ $dispose: () => {
   pinia._s.delete(id);
 },
 ```
+
+### $state
+
+通过store的$state属性，拿到的就是当前的state，通过该属性，可以合并指定的属性当state上，同名属性会被覆盖。
+
+```ts
+const handleCoverClick = () => {
+  counterStore.$state = {
+    count: 100,
+  };
+};
+```
+
+```ts
+// 获取状态
+Object.defineProperty(store, "$state", {
+  get() {
+    return pinia.state.value[id];
+  },
+  set(newState) {
+    $patch(($state: any) => {
+      Object.assign($state, newState);
+    });
+  },
+});
+```
