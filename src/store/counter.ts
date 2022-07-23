@@ -24,6 +24,7 @@ import { computed, reactive, toRefs } from "vue";
 export default defineStore("counter", () => {
   const state = reactive({
     count: 0,
+    fruits: ["香蕉", "苹果"],
   });
   const doubleCount = computed(() => state.count * 2);
   const increment = (num: number) => (state.count += num);

@@ -6,6 +6,7 @@ import {
   reactive,
   computed,
   ComputedRef,
+  isRef,
 } from "vue";
 import { IRootPinia } from "./createPinia";
 import { symbolPinia } from "./rootStore";
@@ -52,10 +53,36 @@ export function defineStore(idOrOptions: any, storeSetup?: any) {
   }
   return useStore;
 }
-
+const isObject = (val: unknown): val is object =>
+  val != null && typeof val === "object";
+const mergeReactiveObject = (target: any, partialState: any) => {
+  for (const key in partialState) {
+    // 不考虑原型属性
+    if (!Object.hasOwn(partialState, key)) continue;
+    const oldValue = target[key];
+    const newValue = partialState[key];
+    // 状态可能是ref ref是对象 但是不能递归
+    if (isObject(oldValue) && isObject(newValue) && !isRef(newValue)) {
+      target[key] = mergeReactiveObject(oldValue, newValue);
+    } else {
+      target[key] = newValue;
+    }
+  }
+  return target;
+};
 const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
+  function $patch(partialStateOrMutation: any) {
+    if (typeof partialStateOrMutation === "function") {
+      partialStateOrMutation(store);
+    } else {
+      mergeReactiveObject(store, partialStateOrMutation);
+    }
+  }
+  const partialStore = {
+    $patch,
+  };
   // 一个store 就是一个reactive对象
-  const store = reactive({});
+  const store = reactive(partialStore);
   // store单独的scope
   let scope: EffectScope;
   // scope可以停止所有的store 每个store也可以停止自己的

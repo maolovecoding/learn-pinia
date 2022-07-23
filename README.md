@@ -425,3 +425,66 @@ const createOptionsStore = (
   const store = createSetupStore(id, setup, pinia);
 };
 ```
+
+### $patch批量更新
+
+**你可以传入一个函数**：
+
+```ts
+const counterStore = useCounterStore();
+const handleClick = () => {
+  // 状态的批量操作
+  counterStore.$patch((store: any) => {
+    store.count++;
+    store.fruits.push("水蜜桃" + store.count);
+  });
+};
+```
+
+**也可以传入一个对象，这个对象会被合并到store上**：
+
+```ts
+counterStore.$patch({
+  count: 20,
+  fruits: [...counterStore.fruits, "橘子"],
+});
+```
+
+#### $patch原理
+
+```ts
+const isObject = (val: unknown): val is object =>
+  val != null && typeof val === "object";
+const mergeReactiveObject = (target: any, partialState: any) => {
+  for (const key in partialState) {
+    // 不考虑原型属性
+    if (!Object.hasOwn(partialState, key)) continue;
+    const oldValue = target[key];
+    const newValue = partialState[key];
+    // 状态可能是ref ref是对象 但是不能递归
+    if (isObject(oldValue) && isObject(newValue) && !isRef(newValue)) {
+      target[key] = mergeReactiveObject(oldValue, newValue);
+    } else {
+      target[key] = newValue;
+    }
+  }
+  return target;
+};
+
+const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
+  function $patch(partialStateOrMutation: any) {
+    if (typeof partialStateOrMutation === "function") {
+      partialStateOrMutation(store);
+    } else {
+      mergeReactiveObject(store, partialStateOrMutation);
+    }
+  }
+  const partialStore = {
+    $patch,
+  };
+  // 一个store 就是一个reactive对象
+  const store = reactive(partialStore);
+  // ......
+  return store;
+};
+```
