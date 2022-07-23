@@ -1,16 +1,109 @@
-# Vue 3 + TypeScript + Vite
+# pinia
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+## vuex 和pinia的对比
 
-## Recommended IDE Setup
+**vuex**的缺点：
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+1. ts支持较差
+2. 命名空间有缺陷
 
-## Type Support For `.vue` Imports in TS
+**pinia**的优点：
 
-Since TypeScript cannot handle type information for `.vue` imports, they are shimmed to be a generic Vue component type by default. In most cases this is fine if you don't really care about component prop types outside of templates. However, if you wish to get actual prop types in `.vue` imports (for example to get props validation when using manual `h(...)` calls), you can enable Volar's Take Over mode by following these steps:
+1. ts兼容性好
+2. 舍弃了命名空间
+3. 不再区分`action`和`mutation`，只有action了。
+4. 修改状态可以直接修改，也可以在action中修改
+5. 更小巧
+6. 可以创建多个store
 
-1. Run `Extensions: Show Built-in Extensions` from VS Code's command palette, look for `TypeScript and JavaScript Language Features`, then right click and select `Disable (Workspace)`. By default, Take Over mode will enable itself if the default TypeScript extension is disabled.
-2. Reload the VS Code window by running `Developer: Reload Window` from the command palette.
+### pinia的简单使用
 
-You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/volar/discussions/471).
+**计数器**：
+
+```ts
+import { defineStore } from "pinia";
+
+export default defineStore("counter", {
+  state() {
+    return {
+      count: 0,
+    };
+  },
+  getters: {
+    doubleCounter(): number {
+      return this.count * 2;
+    },
+  },
+});
+```
+
+```vue
+<script setup lang="ts">
+import { useCounterStore } from "./store";
+const counterStore = useCounterStore();
+</script>
+
+<template>
+  <div>
+    <h2>{{ counterStore.count }}</h2>
+    <button @click="counterStore.count++">+1</button>
+    <button @click="counterStore.count--">-1</button>
+  </div>
+</template>
+```
+
+**其实创建的counterStore**对象，就是一个响应式对象：或者你可以这样简单的先理解一下：
+
+```ts
+const counterStore = reactive({
+  count:0,
+  // ...
+})
+```
+
+### pinia的 vuex用法
+
+如果我们熟悉vuex，那么我们可能会这样使用pinia：
+
+```ts
+export default defineStore("counter", {
+  state() {
+    return {
+      count: 0,
+    };
+  },
+  getters: {
+    doubleCounter(): number {
+      return this.count * 2;
+    },
+  },
+  // 同步异步都在action里面
+  actions: {
+    increment(num: number) {
+      this.count += num;
+    },
+  },
+});
+```
+
+### pinia的setup用法
+
+但是，我们传递的第二个参数不一定是一个对象，也可以是一个setup函数：
+
+```ts
+// 第二个参数还可以是一个setup函数
+export default defineStore("counter", () => {
+  const state = reactive({
+    count: 0,
+  });
+  const doubleCounter = computed(() => state.count * 2);
+  const increment = (num: number) => (state.count += num);
+  return {
+    ...toRefs(state),
+    doubleCounter,
+    increment,
+  };
+});
+```
+
+我们发现，一样可以实现上面的功能。来到这里我只感觉到了一个字：**妙！**真的很优雅啊！
