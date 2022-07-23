@@ -6,6 +6,8 @@ export const createPinia = () => {
   const scope = effectScope(true);
   // run方法发返回值就是这个fn的返回结果
   const state = scope.run(() => ref({}));
+  // 插件数组
+  const _p: any[] = [];
   // 将一个对象标记为不可被转为代理。返回该对象本身。
   const pinia = markRaw({
     install(app: App) {
@@ -22,6 +24,13 @@ export const createPinia = () => {
     _e: scope, // 管理整个应用的scope
     // 所有的store
     _s: new Map(),
+    // 插件
+    use(plugin) {
+      _p.push(plugin);
+      return this;
+    },
+    // 插件数组
+    _p,
   } as Plugin & IRootPinia);
   return pinia;
 };
@@ -32,5 +41,6 @@ export interface IRootPinia {
   state: Ref<any>;
   _e: EffectScope;
   _s: Map<string, any>;
+  use: (plugin: any) => Plugin & IRootPinia;
+  _p: any[];
 }
-

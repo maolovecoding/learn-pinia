@@ -139,6 +139,10 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
     },
   });
   Object.assign(store, setupStore);
+  // TODO 插件执行 每个store都应用一下plugin
+  pinia._p.forEach((plugin) =>
+    Object.assign(store, plugin({ store, pinia, app: pinia._a }))
+  );
   // 向pinia中放入store
   pinia._s.set(id, store);
   return store;
@@ -149,7 +153,7 @@ const createOptionsStore = (
   options: Pick<IPiniaStoreOptions, "actions" | "getters" | "state">,
   pinia: IRootPinia
 ) => {
-  const { state, getters = {}, actions } = options;
+  const { state, getters = {}, actions = {} } = options;
   const setup = () => {
     // 缓存 state
     if (pinia.state.value[id]) {
