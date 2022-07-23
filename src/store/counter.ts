@@ -8,7 +8,7 @@ export default defineStore("counter", {
     };
   },
   getters: {
-    doubleCounter(): number {
+    doubleCount(): number {
       return this.count * 2;
     },
   },
