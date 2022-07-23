@@ -103,6 +103,12 @@ const createSetupStore = (id: string, setup: () => any, pinia: IRootPinia) => {
       );
     },
     $onAction: addSubscription.bind(null, actionSubscribes),
+    // 取消依赖收集 不在更新 除了直接操作state视图更新 其他如计算属性等都失效
+    $dispose: () => {
+      scope.stop();
+      actionSubscribes.length = 0;
+      pinia._s.delete(id);
+    },
   };
   // 一个store 就是一个reactive对象
   const store = reactive(partialStore);
@@ -195,7 +201,7 @@ const wrapAction = (
             triggerSubscription(onErrorCallback, err);
             return Promise.reject(err);
           });
-      } 
+      }
       triggerSubscription(afterCallback, res);
     } catch (err) {
       triggerSubscription(onErrorCallback, err);

@@ -22,6 +22,9 @@ counterStore.$onAction(({ after, onError, store }: any) => {
   });
   // console.log(store);
 });
+setTimeout(() => {
+  counterStore.$dispose();
+}, 3000);
 </script>
 
 <template>

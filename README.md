@@ -625,3 +625,16 @@ const wrapAction = (
   };
 };
 ```
+
+### $dispose
+
+调用该方法，不在收集依赖了。
+
+```ts
+// 取消依赖收集 不在更新 除了直接操作state视图更新 其他如计算属性等都失效
+$dispose: () => {
+  scope.stop();
+  actionSubscribes.length = 0;
+  pinia._s.delete(id);
+},
+```
